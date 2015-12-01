@@ -137,7 +137,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
     protected Expression preMove;
     @UriParam(label = "producer")
     protected Expression moveExisting;
-    @UriParam(label = "consumer,filter")
+    @UriParam(label = "consumer,filter", defaultValue = "false")
     protected Boolean idempotent;
     @UriParam(label = "consumer,filter")
     protected Expression idempotentKey;
@@ -416,7 +416,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
     }
 
     /**
-     * Is used to include files, if filename matches the regex pattern.
+     * Is used to include files, if filename matches the regex pattern (matching is case in-senstive).
      * <p/>
      * Notice if you use symbols such as plus sign and others you would need to configure
      * this using the RAW() syntax if configuring this as an endpoint uri.
@@ -431,7 +431,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
     }
 
     /**
-     * Is used to exclude files, if filename matches the regex pattern.
+     * Is used to exclude files, if filename matches the regex pattern (matching is case in-senstive).
      * <p/>
      * Notice if you use symbols such as plus sign and others you would need to configure
      * this using the RAW() syntax if configuring this as an endpoint uri.

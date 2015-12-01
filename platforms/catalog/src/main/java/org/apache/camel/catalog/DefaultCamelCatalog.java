@@ -40,9 +40,11 @@ import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
 
+import static org.apache.camel.catalog.CatalogHelper.after;
 import static org.apache.camel.catalog.JSonSchemaHelper.getPropertyDefaultValue;
 import static org.apache.camel.catalog.JSonSchemaHelper.isPropertyRequired;
 import static org.apache.camel.catalog.URISupport.createQueryString;
+import static org.apache.camel.catalog.URISupport.normalizeUri;
 import static org.apache.camel.catalog.URISupport.stripQuery;
 
 /**
@@ -463,8 +465,10 @@ public class DefaultCamelCatalog implements CamelCatalog {
         // NOTICE: This logic is similar to org.apache.camel.util.EndpointHelper#endpointProperties
         // as the catalog also offers similar functionality (without having camel-core on classpath)
 
+        // need to normalize uri first
+
         // parse the uri
-        URI u = new URI(uri);
+        URI u = normalizeUri(uri);
         String scheme = u.getScheme();
 
         String json = componentJSonSchema(scheme);
@@ -485,6 +489,9 @@ public class DefaultCamelCatalog implements CamelCatalog {
             throw new IllegalArgumentException("Endpoint with scheme " + scheme + " has no syntax defined in the json schema");
         }
 
+        // clip the scheme from the syntax
+        syntax = after(syntax, ":");
+
         // parse the syntax and find the same group in the uri
         Matcher matcher = SYNTAX_PATTERN.matcher(syntax);
         List<String> word = new ArrayList<String>();
@@ -495,6 +502,8 @@ public class DefaultCamelCatalog implements CamelCatalog {
             }
         }
 
+        // clip the scheme from the uri
+        uri = after(uri, ":");
         String uriPath = stripQuery(uri);
 
         // if there is only one, then use uriPath as is
@@ -598,16 +607,16 @@ public class DefaultCamelCatalog implements CamelCatalog {
     }
 
     @Override
-    public String asEndpointUri(String scheme, String json) throws URISyntaxException {
-        return doAsEndpointUri(scheme, json, "&");
+    public String asEndpointUri(String scheme, String json, boolean encode) throws URISyntaxException {
+        return doAsEndpointUri(scheme, json, "&", encode);
     }
 
     @Override
-    public String asEndpointUriXml(String scheme, String json) throws URISyntaxException {
-        return doAsEndpointUri(scheme, json, "&amp;");
+    public String asEndpointUriXml(String scheme, String json, boolean encode) throws URISyntaxException {
+        return doAsEndpointUri(scheme, json, "&amp;", encode);
     }
 
-    private String doAsEndpointUri(String scheme, String json, String ampersand) throws URISyntaxException {
+    private String doAsEndpointUri(String scheme, String json, String ampersand, boolean encode) throws URISyntaxException {
         List<Map<String, String>> rows = JSonSchemaHelper.parseJsonSchema("properties", json, true);
 
         Map<String, String> copy = new HashMap<String, String>();
@@ -640,20 +649,20 @@ public class DefaultCamelCatalog implements CamelCatalog {
             }
         }
 
-        return doAsEndpointUri(scheme, copy, ampersand);
+        return doAsEndpointUri(scheme, copy, ampersand, encode);
     }
 
     @Override
-    public String asEndpointUri(String scheme, Map<String, String> properties) throws URISyntaxException {
-        return doAsEndpointUri(scheme, properties, "&");
+    public String asEndpointUri(String scheme, Map<String, String> properties, boolean encode) throws URISyntaxException {
+        return doAsEndpointUri(scheme, properties, "&", encode);
     }
 
     @Override
-    public String asEndpointUriXml(String scheme, Map<String, String> properties) throws URISyntaxException {
-        return doAsEndpointUri(scheme, properties, "&amp;");
+    public String asEndpointUriXml(String scheme, Map<String, String> properties, boolean encode) throws URISyntaxException {
+        return doAsEndpointUri(scheme, properties, "&amp;", encode);
     }
 
-    private String doAsEndpointUri(String scheme, Map<String, String> properties, String ampersand) throws URISyntaxException {
+    private String doAsEndpointUri(String scheme, Map<String, String> properties, String ampersand, boolean encode) throws URISyntaxException {
         String json = componentJSonSchema(scheme);
         if (json == null) {
             throw new IllegalArgumentException("Cannot find endpoint with scheme " + scheme);
@@ -671,6 +680,11 @@ public class DefaultCamelCatalog implements CamelCatalog {
         if (syntax == null) {
             throw new IllegalArgumentException("Endpoint with scheme " + scheme + " has no syntax defined in the json schema");
         }
+
+        rows = JSonSchemaHelper.parseJsonSchema("properties", json, true);
+
+        // clip the scheme from the syntax
+        syntax = after(syntax, ":");
 
         String originalSyntax = syntax;
 
@@ -707,31 +721,60 @@ public class DefaultCamelCatalog implements CamelCatalog {
 
         // build the endpoint
         StringBuilder sb = new StringBuilder();
+        sb.append(scheme);
+        sb.append(":");
+
         int range = 0;
+        boolean first = true;
+        boolean hasQuestionmark = false;
         for (int i = 0; i < options.size(); i++) {
             String key = options.get(i);
             String key2 = options2.get(i);
-            String token = tokens[i];
+            String token = null;
+            if (tokens.length > i) {
+                token = tokens[i];
+            }
+
+            boolean contains = properties.containsKey(key);
+            if (!contains) {
+                // if the key are similar we have no explicit value and can try to find a default value if the option is required
+                if (isPropertyRequired(rows, key)) {
+                    String value = getPropertyDefaultValue(rows, key);
+                    if (value != null) {
+                        properties.put(key, value);
+                        key2 = value;
+                    }
+                }
+            }
 
             // was the option provided?
-            if (i == 0 || properties.containsKey(key)) {
-                sb.append(token);
+            if (properties.containsKey(key)) {
+                if (!first && token != null) {
+                    sb.append(token);
+                }
+                hasQuestionmark |= key.contains("?") || (token != null && token.contains("?"));
                 sb.append(key2);
+                first = false;
             }
             range++;
         }
         // append any extra options that was in surplus for the last
         while (range < options2.size()) {
-            String token = tokens[range];
+            String token = null;
+            if (tokens.length > range) {
+                token = tokens[range];
+            }
             String key2 = options2.get(range);
             sb.append(token);
             sb.append(key2);
+            hasQuestionmark |= key2.contains("?") || (token != null && token.contains("?"));
             range++;
         }
 
         if (!copy.isEmpty()) {
-            sb.append('?');
-            String query = createQueryString(copy, ampersand);
+            // the last option may already contain a ? char, if so we should use & instead of ?
+            sb.append(hasQuestionmark ? ampersand : '?');
+            String query = createQueryString(copy, ampersand, encode);
             sb.append(query);
         }
 

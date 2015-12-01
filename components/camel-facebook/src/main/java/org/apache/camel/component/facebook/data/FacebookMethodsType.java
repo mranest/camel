@@ -32,6 +32,7 @@ import facebook4j.BatchRequests;
 import facebook4j.Checkin;
 import facebook4j.CheckinUpdate;
 import facebook4j.Comment;
+import facebook4j.CommentUpdate;
 import facebook4j.Domain;
 import facebook4j.Event;
 import facebook4j.EventUpdate;
@@ -94,6 +95,7 @@ public enum FacebookMethodsType {
     ADDALBUMPHOTO(String.class, "addAlbumPhoto", String.class, "albumId", Media.class, "source"),
     ADDALBUMPHOTO_WITH_MEDIA(String.class, "addAlbumPhoto", String.class, "albumId", Media.class, "source", String.class, "message"),
     COMMENTALBUM(String.class, "commentAlbum", String.class, "albumId", String.class, "message"),
+    COMMENTALBUM_UPDATE(String.class, "commentAlbum", String.class, "albumId", CommentUpdate.class, "commentUpdate"),
     CREATEALBUM(String.class, "createAlbum", AlbumUpdate.class, "albumUpdate"),
     CREATEALBUM_WITH_ID(String.class, "createAlbum", String.class, "userId", AlbumUpdate.class, "albumUpdate"),
     GETALBUM(Album.class,  "getAlbum", String.class, "albumId"),
@@ -132,6 +134,9 @@ public enum FacebookMethodsType {
     // CommentMethods
     DELETECOMMENT(boolean.class, "deleteComment", String.class, "commentId"),
     GETCOMMENT(Comment.class, "getComment", String.class, "commentId"),
+    GETCOMMENT_REPLIES(List.class, "getCommentReplies", String.class, "commentId"),
+    GETCOMMENT_REPLIES_WITH_OPTIONS(List.class, "getCommentReplies", String.class, "commentId", Reading.class, FacebookConstants.READING_PPROPERTY),
+    GETCOMMENT_WITH_OPTIONS(Comment.class, "getComment", String.class, "commentId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETCOMMENTLIKES(ResponseList.class, "getCommentLikes", String.class, "commentId"),
     GETCOMMENTLIKES_WITH_OPTIONS(ResponseList.class, "getCommentLikes", String.class, "commentId", Reading.class, FacebookConstants.READING_PPROPERTY),
     LIKECOMMENT(boolean.class, "likeComment", String.class, "commentId"),
@@ -249,7 +254,9 @@ public enum FacebookMethodsType {
     GETFRIENDS_WITH_ID(ResponseList.class, "getFriends", String.class, "userId"),
     GETFRIENDS_WITH_ID_OPTIONS(ResponseList.class, "getFriends", String.class, "userId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETTAGGABLEFRIENDS(ResponseList.class, "getTaggableFriends"),
+    GETTAGGABLEFRIENDS_WITH_ID(ResponseList.class, "getTaggableFriends", String.class, "userId"),
     GETTAGGABLEFRIENDS_WITH_OPTIONS(ResponseList.class, "getTaggableFriends", Reading.class, FacebookConstants.READING_PPROPERTY),
+    GETTAGGABLEFRIENDS_WITH_ID_OPTIONS(ResponseList.class, "getTaggableFriends", String.class, "userId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETMUTUALFRIENDS(ResponseList.class, "getMutualFriends", String.class, "friendUserId"),
     GETMUTUALFRIENDS_WITH_OPTIONS(ResponseList.class, "getMutualFriends", String.class, "friendUserId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETMUTUALFRIENDS_WITH_ID(ResponseList.class, "getMutualFriends", String.class, "userId1", String.class, "userId2"),
@@ -305,6 +312,7 @@ public enum FacebookMethodsType {
 
     // LinkMethods
     COMMENTLINK(String.class, "commentLink", String.class, "linkId", String.class, "message"),
+    COMMENTLINK_UPDATE(String.class, "commentLink", String.class, "linkId", CommentUpdate.class, "commentUpdate"),
     GETLINK(Link.class,  "getLink", String.class, "linkId"),
     GETLINK_WITH_OPTIONS(Link.class,  "getLink", String.class, "linkId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETLINKCOMMENTS(ResponseList.class, "getLinkComments", String.class, "linkId"),
@@ -369,16 +377,21 @@ public enum FacebookMethodsType {
     MARKNOTIFICATIONASREAD(Boolean.class,  "markNotificationAsRead", String.class, "notificationId"),
 
     // PermissionMethods
+    DELETEALLPERMISSIONS(Boolean.class,  "deleteAllPermissions"),
+    DELETEALLPERMISSIONS_WITH_ID(Boolean.class,  "deleteAllPermissions", String.class, "userId"),
     GETPERMISSIONS(List.class, "getPermissions"),
     GETPERMISSIONS_WITH_ID(List.class, "getPermissions", String.class, "userId"),
     REVOKEPERMISSION(Boolean.class,  "revokePermission", String.class, "permissionName"),
     REVOKEPERMISSION_WITH_ID(Boolean.class,  "revokePermission", String.class, "userId", String.class, "permissionName"),
+    REVOKEALLPERMISSIONS(Boolean.class,  "revokeAllPermissions"),
+    REVOKEALLPERMISSIONS_WITH_ID(Boolean.class,  "revokeAllPermissions", String.class, "userId"),
 
     // PhotoMethods
     ADDTAGTOPHOTO(Boolean.class,  "addTagToPhoto", String.class, "photoId", String.class, "toUserId"),
     ADDTAGTOPHOTO_WITH_IDS(Boolean.class,  "addTagToPhoto", String.class, "photoId", List.class, "toUserIds"),
     ADDTAGTOPHOTO_WITH_TAGUPDATE(Boolean.class,  "addTagToPhoto", String.class, "photoId", TagUpdate.class, "tagUpdate"),
     COMMENTPHOTO(String.class, "commentPhoto", String.class, "photoId", String.class, "message"),
+    COMMENTPHOTO_UPDATE(String.class, "commentPhoto", String.class, "photoId", CommentUpdate.class, "commentUpdate"),
     DELETEPHOTO(Boolean.class,  "deletePhoto", String.class, "photoId"),
     GETPHOTO(Photo.class,  "getPhoto", String.class, "photoId"),
     GETPHOTO_WITH_OPTIONS(Photo.class,  "getPhoto", String.class, "photoId", Reading.class, FacebookConstants.READING_PPROPERTY),
@@ -407,6 +420,7 @@ public enum FacebookMethodsType {
 
     // PostMethods
     COMMENTPOST(String.class, "commentPost", String.class, "postId", String.class, "message"),
+    COMMENTPOST_UPDATE(String.class, "commentPost", String.class, "postId", CommentUpdate.class, "commentUpdate"),
     DELETEPOST(Boolean.class,  "deletePost", String.class, "postId"),
     GETFEED(ResponseList.class, "getFeed"),
     GETFEED_WITH_OPTIONS(ResponseList.class, "getFeed", Reading.class, FacebookConstants.READING_PPROPERTY),
@@ -496,6 +510,7 @@ public enum FacebookMethodsType {
 
     // VideoMethods
     COMMENTVIDEO(String.class, "commentVideo", String.class, "videoId", String.class, "message"),
+    COMMENTVIDEO_UPDATE(String.class, "commentVideo", String.class, "videoId", CommentUpdate.class, "commentUpdate"),
     GETVIDEO(Video.class,  "getVideo", String.class, "videoId"),
     GETVIDEO_WITH_OPTIONS(Video.class,  "getVideo", String.class, "videoId", Reading.class, FacebookConstants.READING_PPROPERTY),
     GETVIDEOCOMMENTS(ResponseList.class, "getVideoComments", String.class, "videoId"),
